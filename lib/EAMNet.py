@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from lib.ConvNeXt import *
 from lib.Res2Net_v1b import *
-from lib.sdy.resnet import *
+from lib.resnet import *
 from lib.Rcab import *
 from lib.vgg import vgg16
 

@@ -155,7 +155,7 @@ class IntegralAttention (nn.Module):
 
         return out
 
-# integrity aggregate module
+# EIA module
 class EIA(nn.Module):
     def __init__(self, s_channel = 64, h_channel= 64 ,e_channel= 64 ):
         super(EIA, self).__init__()
@@ -232,15 +232,13 @@ class Network(nn.Module):
         
         self.Bconv1 = ConvBR(channel, channel,kernel_size=3, stride=1,padding=1)
         self.Bconv2 = ConvBR(channel, channel,kernel_size=3, stride=1,padding=1)
-     
+        
         self.iam1 = EIA(channel,channel,channel)
         self.iam2 = EIA(channel,channel,channel)
         self.iam3 = EIA(channel,channel,channel)
-
         self.sie1 = SEA()
         self.sie2 = SEA()
         self.sie3 = SEA()
-
         self.rcab1 = RCAB(64)
         self.rcab2 = RCAB(64)
         self.rcab3 = RCAB(64)
@@ -267,12 +265,9 @@ class Network(nn.Module):
         self.pre_out5  = nn.Conv2d(channel, 1, 1)
         self.pre_out6  = nn.Conv2d(channel, 1, 1)
         
-
-
     def forward(self, x):
     # Feature Extraction
         shape = x.size()[2:]
-
     #   ---- Res2Net Backbone ---- 
         x = self.resnet.conv1(x)
         x = self.resnet.bn1(x)
@@ -287,8 +282,6 @@ class Network(nn.Module):
     #  ---- ConvNext Backbone ----
         #datalist = self.backbone(x)
         #x1, x2, x3, x4 = datalist[0], datalist[1], datalist[2], datalist[3]    # bs, 96,48,24,12
-    
-
         
     # Channel Reduce
         x1_t = self.reduce_s1(x1)
@@ -301,58 +294,35 @@ class Network(nn.Module):
         x3_e = self.reduce_e3(x3)
         x4_e = self.reduce_e4(x4)
         
-    
     #stage 1
-
-
         hr_s = self.guideflow_sh1(x4_t,x1_t)
         hr_s = self.rcab1(hr_s)
-
         hr_e = self.guideflow_eh1(x4_e,x1_e)
         hr_e = self.rcab4(hr_e)
-
-        
         edge_1 = self.sie1(x4_t,x3_e,x4_e)  #24*24
         fuse_1 = self.iam1(x3_t,x4_t,edge_1)  #B*C*24*24
-
     #stage 2
-
         hr_s = self.guideflow_sh2(fuse_1,hr_s)
         hr_s = self.rcab2(hr_s)
- 
         hr_e = self.guideflow_eh2(edge_1,hr_e)
         hr_e = self.rcab5(hr_e)
-  
-
-
         edge_2 = self.sie2(fuse_1,x2_e,edge_1) #48*48
         fuse_2 = self.iam2(x2_t,fuse_1,edge_2) #B*C*48*48
-        
-
     #stage 3
-        #high_3 = self.guideflow_sh3(fuse_2,high_2)
-        #high_3 = self.rcab3(high_3)
-
-        #long skip connection
         hr_s = self.guideflow_sh3(fuse_2,hr_s)
         hr_s = self.rcab3(hr_s)
         #hr_s = self.Bconv1(hr_s) 
         #hr_s = self.skip1(self.Bconv1(hr_s) + x1_t)
-
         hr_e = self.guideflow_eh3(edge_2,hr_e)
         hr_e = self.rcab6(hr_e)
         #hr_e = self.Bconv2(hr_e)
         #hr_e = self.skip2(self.Bconv2(hr_e) + x1_e)
-
-
         edge_3 = self.sie3(fuse_2,hr_e,edge_2)   # 96*96
         fuse_3 = self.iam3(hr_s,fuse_2,edge_3)
-        
-
+    
         preds1   = F.interpolate(self.pre_out1(fuse_1), size = shape, mode='bilinear') 
         preds2   = F.interpolate(self.pre_out2(fuse_2), size = shape, mode='bilinear') 
         pred_f   = F.interpolate(self.pre_out3(fuse_3), size = shape, mode='bilinear')  #final pred
-
 
         prede1   = F.interpolate(self.pre_out4(edge_1), size = shape, mode='bilinear') 
         prede2   = F.interpolate(self.pre_out5(edge_2), size = shape, mode='bilinear') 

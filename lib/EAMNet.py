@@ -15,6 +15,7 @@ from lib.vgg import vgg16
 
 eps = 1e-12
 
+#Channel Reduce
 class Reduction(nn.Module):
     def __init__(self, in_channel, out_channel,RFB = False):
         super(Reduction, self).__init__()
@@ -31,10 +32,10 @@ class Reduction(nn.Module):
         return self.reduce(x)
 
 
-    
-class Edge_predict3(nn.Module):
+#
+class SEA(nn.Module):
     def __init__(self, channel = 64):
-        super(Edge_predict3, self).__init__() 
+        super(SEA, self).__init__() 
     
         self.upconv2 = conv_upsample()
 
@@ -43,7 +44,7 @@ class Edge_predict3(nn.Module):
         self.conv3 = nn.Sequential(ConvBR(channel, channel,kernel_size=3, stride=1,padding=1))
         self.conv4 = nn.Sequential(ConvBR(channel, channel,kernel_size=3, stride=1,padding=1))
         #self.Bconv1 = nn.Sequential(ConvBR(channel, channel,kernel_size=3, stride=1,padding=1))
-        self.ms = MS_CAM()  
+        #self.ms = MS_CAM()  
         self.fuse1  = nn.Sequential(ConvBR(channel, channel,kernel_size=3, stride=1,padding=1))
         self.fuse2  = nn.Sequential(ConvBR(channel, channel,kernel_size=3, stride=1,padding=1))
 
@@ -51,11 +52,8 @@ class Edge_predict3(nn.Module):
             ConvBR(channel*2, channel*2,kernel_size=3, stride=1,padding=1),
             BasicConv2d(channel*2, channel,kernel_size=3, stride=1,padding=1),
         )
-
-
-
+        
     def forward(self, sen_f, edge_f, edge_previous):   # x guide y
-
         s1 = F.upsample(sen_f, size=edge_f.size()[2:], mode='bilinear', align_corners=True)
         s1 = self.conv1(s1)  #upsample
         s2 = self.conv2(sen_f) 
@@ -158,9 +156,9 @@ class IntegralAttention (nn.Module):
         return out
 
 # integrity aggregate module
-class IAM(nn.Module):
+class EIA(nn.Module):
     def __init__(self, s_channel = 64, h_channel= 64 ,e_channel= 64 ):
-        super(IAM, self).__init__()
+        super(EIA, self).__init__()
         #self.conv0 = nn.Conv2d(in_channel_left, 256, kernel_size=1, stride=1, padding=0)
         self.conv_1 =  ConvBR(h_channel, h_channel,kernel_size=3, stride=1,padding=1)
         self.conv_2 =  ConvBR(s_channel, h_channel,kernel_size=3, stride=1,padding=1)
@@ -235,13 +233,13 @@ class Network(nn.Module):
         self.Bconv1 = ConvBR(channel, channel,kernel_size=3, stride=1,padding=1)
         self.Bconv2 = ConvBR(channel, channel,kernel_size=3, stride=1,padding=1)
      
-        self.iam1 = IAM(channel,channel,channel)
-        self.iam2 = IAM(channel,channel,channel)
-        self.iam3 = IAM(channel,channel,channel)
+        self.iam1 = EIA(channel,channel,channel)
+        self.iam2 = EIA(channel,channel,channel)
+        self.iam3 = EIA(channel,channel,channel)
 
-        self.sie1 = Edge_predict3()
-        self.sie2 = Edge_predict3()
-        self.sie3 = Edge_predict3()
+        self.sie1 = SEA()
+        self.sie2 = SEA()
+        self.sie3 = SEA()
 
         self.rcab1 = RCAB(64)
         self.rcab2 = RCAB(64)

@@ -173,7 +173,7 @@ if __name__ == '__main__':
     parser.add_argument('--val_root', type=str, default='./Dataset/TestDataset/COD10K/',
                         help='the test rgb images root')
     parser.add_argument('--save_path', type=str,
-                        default='./snapshot/sdy_SINet_CAMO_0/',
+                        default='./snapshot/EAMNet/',
                         help='the path to save model and log')
     parser.add_argument('--optimizer', type=str,
                         default='AdamW', help='choosing optimizer AdamW or SGD')
